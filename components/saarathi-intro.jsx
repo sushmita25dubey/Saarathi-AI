@@ -18,11 +18,11 @@ export default function SaarathiIntro() {
     if (!isVisible || pathname !== "/") return;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const exitTimer = window.setTimeout(() => setIsExiting(true), 250);
+      const exitTimer = window.setTimeout(() => setIsExiting(true), 500);
       const removeTimer = window.setTimeout(() => {
         completeIntro();
         setIsVisible(false);
-      }, 400);
+      }, 2000);
 
       return () => {
         window.clearTimeout(exitTimer);
@@ -30,11 +30,11 @@ export default function SaarathiIntro() {
       };
     }
 
-    const exitTimer = window.setTimeout(() => setIsExiting(true), 650);
+    const exitTimer = window.setTimeout(() => setIsExiting(true), 1500);
     const removeTimer = window.setTimeout(() => {
       completeIntro();
       setIsVisible(false);
-    }, 1000);
+    }, 2000);
 
     return () => {
       window.clearTimeout(exitTimer);
