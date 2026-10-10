@@ -3,8 +3,37 @@ import { inngest } from "./client";
 import { db } from "@/lib/prisma";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+const CONFIGURED_GEMINI_MODEL = process.env.GEMINI_MODEL;
+const DEFAULT_GEMINI_MODEL =
+  CONFIGURED_GEMINI_MODEL === "gemini-2.0-flash" ||
+  CONFIGURED_GEMINI_MODEL === "gemini-1.5-flash"
+    ? "gemini-3.8-flash"
+    : CONFIGURED_GEMINI_MODEL || "gemini-3.8-flash";
+const FALLBACK_GEMINI_MODEL = "gemini-3.8-flash";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+
+async function generateWithGeminiFallback(prompt) {
+  const primaryModel = genAI.getGenerativeModel({ model: DEFAULT_GEMINI_MODEL });
+
+  try {
+    return await primaryModel.generateContent(prompt);
+  } catch (error) {
+    const message = String(error?.message || error);
+    const shouldRetry =
+      error?.status === 503 ||
+      error?.status === 429 ||
+      /high demand|temporar|unavailable|rate limit/i.test(message);
+
+    if (shouldRetry && DEFAULT_GEMINI_MODEL !== FALLBACK_GEMINI_MODEL) {
+      const fallbackModel = genAI.getGenerativeModel({
+        model: FALLBACK_GEMINI_MODEL,
+      });
+      return await fallbackModel.generateContent(prompt);
+    }
+
+    throw error;
+  }
+}
 
 export const generateIndustryInsights = inngest.createFunction(
   {
@@ -43,7 +72,7 @@ export const generateIndustryInsights = inngest.createFunction(
       const res = await step.ai.wrap(
         "gemini",
         async (p) => {
-          return await model.generateContent(p);
+          return await generateWithGeminiFallback(p);
         },
         prompt
       );
